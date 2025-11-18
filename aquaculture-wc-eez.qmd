@@ -1,0 +1,114 @@
+---
+title: "aquaculture-wc-eez"
+format: html
+---
+
+# Importing libraries
+```{r, message=FALSE}
+library(tidyverse)
+library(sf)
+library(terra)
+library(dismo)
+library(tmap)
+library(here)
+```
+
+# Import Data
+```{r, message=FALSE, output=FALSE}
+# load raster dataset
+avg_08 <- rast(here("data","average_annual_sst_2008.tif"))
+avg_09 <- rast(here("data","average_annual_sst_2009.tif"))
+avg_10 <- rast(here("data","average_annual_sst_2010.tif"))
+avg_11 <- rast(here("data","average_annual_sst_2011.tif"))
+avg_12 <- rast(here("data","average_annual_sst_2012.tif"))
+
+depth <- rast(here("data","depth.tif"))
+
+# Reading in Shapefile
+regions <- st_read(here("data", "wc_regions_clean.shp"),  quiet = TRUE)
+
+
+```
+
+### Matching CRS for Rasters
+```{r}
+# check and transform coordinate reference systems
+if(crs(avg_08) == crs(avg_09)) {
+  print("Coordinate reference systems match:)")
+} else{
+  warning("Updating coordinate reference systems to match :(")}
+
+# check and transform coordinate reference systems
+if(crs(avg_08) == crs(avg_10)) {
+  print("Coordinate reference systems match:)")
+} else{
+  warning("Updating coordinate reference systems to match :(")}
+
+# check and transform coordinate reference systems
+if(crs(avg_08) == crs(avg_11)) {
+  print("Coordinate reference systems match:)")
+} else{
+  warning("Updating coordinate reference systems to match :(")}
+
+# check and transform coordinate reference systems
+if(crs(avg_08) == crs(avg_12)) {
+  print("Coordinate reference systems match :)")
+} else{
+  warning("Updating coordinate reference systems to match :(")}
+
+# check and transform coordinate reference systems
+if (crs(avg_08) == crs(depth)) {
+  print("Coordinate reference systems match :)")
+} else {
+  warning("Updating coordinate reference systems to match :(")
+  # transform raster to match avg_08
+  depth <- project(depth, crs(avg_08))
+}
+
+# check and transform coordinate reference systems
+if (crs(avg_08) == crs(regions)) {
+  print("Coordinate reference systems match :)")
+} else {
+  warning("Updating coordinate reference systems to match :(")
+    # transform raster to match avg_08
+  regions <- st_transform(regions, crs(avg_08))
+}
+
+
+```
+#### Combine SST rasters into a raster stack
+```{r}
+# Combining rasters
+sst_stack <- c(avg_08, avg_09, avg_10, avg_11, avg_12)
+
+# Mean of all Rasters and Converting temp values  K -> °C
+sst_mean <- mean(sst_stack) - 273.15
+names(sst_mean) <- "sst_mean_C"
+
+```
+
+#### Checking Crop, Extent, Resolution
+```{r}
+# Obtain geographic extent/bounding box of species occurrences
+st_bbox(sst_mean)
+#      xmin       ymin       xmax       ymax 
+# -131.98475   29.99305 -114.98672   49.98842 
+
+
+# Crop depth to the SST extent to save time (use terra ext)
+depth_crop <- crop(depth, ext(sst_mean))
+
+# Resample depth to match SST resolution / origin (nearest neighbor)
+depth_resampled <- resample(depth_crop, sst_mean, method = "near")
+
+# Check Resolution
+res(sst_mean); res(depth_resampled)
+
+# Check Extent
+ext(sst_mean); ext(depth_resampled)
+
+# Check CRS
+crs(sst_mean); crs(depth_resampled)
+```
+
+
