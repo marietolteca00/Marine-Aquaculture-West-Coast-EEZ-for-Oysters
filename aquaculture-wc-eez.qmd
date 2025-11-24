@@ -95,20 +95,69 @@ st_bbox(sst_mean)
 # -131.98475   29.99305 -114.98672   49.98842 
 
 
-# Crop depth to the SST extent to save time (use terra ext)
+# Crop depth to the SST extent 
 depth_crop <- crop(depth, ext(sst_mean))
 
-# Resample depth to match SST resolution / origin (nearest neighbor)
+# Resample depth to match SST resolution
 depth_resampled <- resample(depth_crop, sst_mean, method = "near")
 
 # Check Resolution
-res(sst_mean); res(depth_resampled)
+if (all(res(sst_mean) == res(depth_resampled))) {
+  print("Resolutions matche :)")
+} else {
+  print("Fix resolution :(")
+}
 
 # Check Extent
-ext(sst_mean); ext(depth_resampled)
+if (all(ext(sst_mean) == ext(depth_resampled))) {
+  print("Extent matches :)")
+} else {
+  print("Fix Extent :(")
+}
 
 # Check CRS
-crs(sst_mean); crs(depth_resampled)
+if (crs(sst_mean) == crs(depth_resampled)) {
+  print("CRS matches :)")
+} else {
+  print("Fix CRS :(")
+}
+```
+
+
+#Find suitable locations
+To find suitable locations for marine aquaculture, we’ll need to find locations that are suitable in terms of both SST and depth.
+**Oysters:**
+Research has shown that oysters need the following conditions for optimal growth:
+
+- sea surface temperature: 11-30°C
+- depth: 0-70 meters below sea level**
+
+- **reclassify SST and depth data into locations that are suitable for oysters*
+- hint: set suitable values to 1 and unsuitable values to 0
+## find locations that satisfy both SST and depth conditions
+```{r}
+# Define the reclassification matrix for Oyster
+rcl_oyster <- matrix(c(-Inf, 11, 0, 
+                        11, 30, 1,
+                        30, Inf, 0), ncol = 3, byrow = TRUE)
+
+# Use classify function
+reclassified_oyster <- terra::classify(depth_resampled, rcl = rcl_oyster)
+
+
+# Define the reclassification matrix for Depth
+rcl_depth <- matrix(c(-Inf, 0, 0, 
+                        0, 70, 1,
+                        70, Inf, 0), ncol = 3, byrow = TRUE)
+
+# Use classify function
+reclassified_depth <- classify(depth_resampled, rcl_depth)
+
+# Combine Oyster and Depth for suitability
+suitable <- reclassified_oyster * reclassified_depth #Min = 0, Max = 1
+
+
+
 ```
 
 
