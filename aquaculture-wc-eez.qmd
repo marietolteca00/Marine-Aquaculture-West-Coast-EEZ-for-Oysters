@@ -24,7 +24,7 @@ avg_12 <- rast(here("data","average_annual_sst_2012.tif"))
 
 depth <- rast(here("data","depth.tif"))
 
-# Reading in Shapefile
+# Reading in Shapefile- EEZ Data
 regions <- st_read(here("data", "wc_regions_clean.shp"),  quiet = TRUE)
 
 
@@ -83,7 +83,7 @@ sst_stack <- c(avg_08, avg_09, avg_10, avg_11, avg_12)
 
 # Mean of all Rasters and Converting temp values  K -> °C
 sst_mean <- mean(sst_stack) - 273.15
-names(sst_mean) <- "sst_mean_C"
+names(sst_mean) <- "sst_mean"
 
 ```
 
@@ -121,6 +121,7 @@ if (crs(sst_mean) == crs(depth_resampled)) {
 } else {
   print("Fix CRS :(")
 }
+
 ```
 
 
@@ -136,28 +137,72 @@ Research has shown that oysters need the following conditions for optimal growth
 - hint: set suitable values to 1 and unsuitable values to 0
 ## find locations that satisfy both SST and depth conditions
 ```{r}
-# Define the reclassification matrix for Oyster
-rcl_oyster <- matrix(c(-Inf, 11, 0, 
+# Define the reclassification matrix for SST - sea level
+rcl_sst <- matrix(c(-Inf, 11, 0, 
                         11, 30, 1,
                         30, Inf, 0), ncol = 3, byrow = TRUE)
 
 # Use classify function
-reclassified_oyster <- terra::classify(depth_resampled, rcl = rcl_oyster)
+reclassified_sst <- terra::classify(sst_mean, rcl = rcl_sst)
 
 
 # Define the reclassification matrix for Depth
-rcl_depth <- matrix(c(-Inf, 0, 0, 
-                        0, 70, 1,
-                        70, Inf, 0), ncol = 3, byrow = TRUE)
+rcl_depth <- matrix(c(-Inf, -70, 0, 
+                        -70, 0, 1,
+                        0, Inf, 0), ncol = 3, byrow = TRUE)
 
 # Use classify function
 reclassified_depth <- classify(depth_resampled, rcl_depth)
 
 # Combine Oyster and Depth for suitability
-suitable <- reclassified_oyster * reclassified_depth #Min = 0, Max = 1
+suitable <- reclassified_sst * reclassified_depth # Min = 0, Max = 1
+
+# Map it
+tm_shape(suitable)+
+  tm_raster()
+```
+
+## Masking
+
+```{r}
+eez_rast <- rasterize(regions, 
+                 # template- using extent, resolution, crs
+                 suitable, 
+                 # use region column
+                 field = "rgn")
+
+
+# Mask
+suitable_mask <- mask(suitable,regions)
+
+# Cell size
+cell_area <- cellSize(suitable_mask, unit = "km")
+
+#grab area from cell area and mask
+suitable_area <- cell_area * suitable_mask
+
+# Sum suitable area by EEZ
+area_by_eez_zonal <- zonal(cell_area * suitable_mask, eez_rast, fun = "sum", na.rm = TRUE) %>% 
+  rename("suitable_area_km2" = area) %>% 
+  mutate(suitable_area_km2 = as.numeric(suitable_area_km2)) %>% 
+  as_tibble() %>% 
+  arrange(desc(suitable_area_km2))
+#print
+area_by_eez_zonal
+```
+
+```{r}
+# left joing with regions 
+# 
+# 
+# area km2 / suitable area km2 *100 for percentage- table
 
 
 
 ```
 
+
+### california sea hare
+depth range 0 - 22 m
+13.4 - 27.1, mean 22 
 
