@@ -191,12 +191,38 @@ area_by_eez_zonal <- zonal(cell_area * suitable_mask, eez_rast, fun = "sum", na.
 area_by_eez_zonal
 ```
 
-```{r}
-# left joing with regions 
-# 
-# 
-# area km2 / suitable area km2 *100 for percentage- table
+```{r, message=FALSE}
 
+tm_shape(regions) +
+  tm_polygons("rgn", palette = "Set3", title = "EEZ Regions", alpha = 1) +
+tm_shape(suitable_mask) +
+  tm_raster(alpha = 0.6, title = "Suitable Area") +
+tm_shape(regions) +
+  # Adding labels
+  tm_text("rgn", size = 0.5) +   
+tm_layout(
+  legend.outside.position = TRUE)+
+tm_scale_bar(position = c(-.01, 0.08)) +
+tm_compass(position = c("right", "top"))
+
+
+
+```
+
+
+
+```{r}
+#Set as simple features to conserve geometry
+region_sf <- st_as_sf(regions)
+# left joing with regions 
+#eez_joined <- st_join(region_sf, area_by_eez_zonal, join = 'left')
+#convert back to spatvector
+#eez_final <- vect(eez_joined, geom= 'geometry' )
+
+# area km2 / suitable area km2 *100 for percentage- table
+#eez_final %>% 
+  #mutate(perc_area_km2 = area_km2/suitable_area_km2*100)
+  
 
 
 ```
