@@ -163,7 +163,6 @@ tm_shape(suitable)+
 ```
 
 ## Masking
-
 ```{r}
 eez_rast <- rasterize(regions, 
                  # template- using extent, resolution, crs
@@ -178,9 +177,6 @@ suitable_mask <- mask(suitable,regions)
 # Cell size
 cell_area <- cellSize(suitable_mask, unit = "km")
 
-#grab area from cell area and mask
-suitable_area <- cell_area * suitable_mask
-
 # Sum suitable area by EEZ
 area_by_eez_zonal <- zonal(cell_area * suitable_mask, eez_rast, fun = "sum", na.rm = TRUE) %>% 
   rename("suitable_area_km2" = area) %>% 
@@ -190,7 +186,7 @@ area_by_eez_zonal <- zonal(cell_area * suitable_mask, eez_rast, fun = "sum", na.
 #print
 area_by_eez_zonal
 ```
-
+# Plot
 ```{r, message=FALSE}
 
 tm_shape(regions) +
@@ -209,26 +205,174 @@ tm_compass(position = c("right", "top"))
 
 ```
 
-
-
+# Join Dataframes 
 ```{r}
 #Set as simple features to conserve geometry
 region_sf <- st_as_sf(regions)
-# left joing with regions 
-#eez_joined <- st_join(region_sf, area_by_eez_zonal, join = 'left')
-#convert back to spatvector
-#eez_final <- vect(eez_joined, geom= 'geometry' )
 
-# area km2 / suitable area km2 *100 for percentage- table
-#eez_final %>% 
-  #mutate(perc_area_km2 = area_km2/suitable_area_km2*100)
-  
+# Join zonal data and calculate percentage in one step
+eez_sf <- region_sf %>%
+  left_join(area_by_eez_zonal, by = "rgn") %>%
+  mutate(perc_area_km2 = (area_km2 / suitable_area_km2) * 100)
+
+```
+
+# Map- After joining checking for Oysters along the West Coast 
+```{r, message=FALSE}
+tm_shape(eez_sf) +
+  tm_polygons(
+    "suitable_area_km2",
+    palette = "-mako",
+    style = "cont",
+    title = "Suitable Area (km²)"
+  ) +
+  tm_text(
+    "rgn",
+    size = 0.45,
+    col = "black",
+    fontface = "bold",
+    bgcol = "antiquewhite",
+    bgcol_alpha = 0.2) +
+  tm_layout(
+    main.title = "Suitable Area for Oyster Aquaculture in California EEZs\nPercent of Total EEZ Area Meeting Preferred Temperature & Depth Criteria",
+    main.title.size = 0.8,       # Controls title + subtitle size
+    main.title.fontface = "bold",
+    legend.outside = TRUE,
+    legend.outside.position = "right",
+    component.autoscale = FALSE,
+    outer.margins = c(0.01, 0.25, 0.01, 0.05)
+  ) +
+  tm_scale_bar(
+    position = c("left","bottom"), text.size=0.35
+  ) +
+  tm_compass(
+    type = "arrow",
+    position = c("right", "top")
+  )+
+  tm_basemap("OpenStreetMap")
+
 
 
 ```
 
+# Generalizeable Workflow Function with Map
+```{r}
+suit_func <- function(
+  sst_raster,
+  depth_raster,
+  eez_sf,
+  min_sst,
+  max_sst,
+  min_depth,
+  max_depth,
+  species_name
+) {
+  
+  # Reclassify Depth
+  rcl_depth <- matrix(c(
+    -Inf, min_depth, 0,
+     min_depth, max_depth, 1,
+     max_depth, Inf, 0
+  ), byrow = TRUE, ncol = 3)
 
-### california sea hare
-depth range 0 - 22 m
-13.4 - 27.1, mean 22 
+  depth_suit <- classify(depth_raster, rcl_depth)
+  
+  # Reclassify SST
+  rcl_sst <- matrix(c(
+    -Inf, min_sst, 0,
+     min_sst, max_sst, 1,
+     max_sst, Inf, 0
+  ), byrow = TRUE, ncol = 3)
+
+  sst_suit <- classify(sst_raster, rcl_sst)
+  
+  # Combine Stack
+  suit_env <- depth_suit * sst_suit
+  
+  # Mask
+  suit_mask <- mask(suit_env,regions)
+  
+  # Rasterize EEZ polygons to match raster grid
+  eez_rast <- terra::rasterize(eez_sf, suit_mask, field = "rgn")
+  
+  # Zonal area (km^2)
+  cell_area <- cellSize(suit_mask, unit = "km")
+
+  area_table <- zonal(cell_area * suit_mask, eez_rast, fun = "sum", na.rm = TRUE) %>% 
+  rename("suitable_area_km2_new" = area) %>% 
+  mutate(suitable_area_km2_new = as.numeric(suitable_area_km2_new)) %>% 
+  as_tibble() %>% 
+  arrange(desc(suitable_area_km2_new))
+
+  # Join back to EEZ polygons for mapping
+  eez_joined <- left_join(eez_sf, area_table, by = "rgn")
+  
+  # Plot It!
+  suit_func_map <- 
+    tm_shape(eez_joined) +
+      tm_polygons(
+        "suitable_area_km2_new",
+        palette = "-mako",
+        style = "cont",
+        title = "Suitable Area (km²)"
+      ) +
+      tm_text("rgn", 
+              size = 0.45, 
+              col = "black", 
+              fontface = "bold",
+              bgcol = "antiquewhite",
+              bgcol_alpha = 0.2) +
+      tm_layout(
+        main.title = paste(
+          "Suitable Area for", species_name,
+          "\nBased on Preferred Temperature and Depth"
+        ),
+        main.title.size = 0.8,
+        main.title.fontface = "bold",
+        legend.outside = TRUE,
+        legend.outside.position = "right",
+        component.autoscale = FALSE,
+        outer.margins = c(0.01, 0.25, 0.01, 0.05)
+      ) +
+      tm_scale_bar(position = c("left", "bottom"), text.size = 0.35) +
+      tm_compass(type = "arrow", position = c("right", "top"))+
+      tm_basemap("OpenStreetMap")
+  
+  return(suit_func_map)
+}
+
+```
+
+# Use Function with a New Species
+#### **Aplysia californica**, California sea hare -
+- Depth range: 0 - 22 m
+- Sea Level: 13.4 - 27.1 
+#### Another Species California spiny lobster (Panulirus Interruptus) for fun
+```{r, message=FALSE}
+# California sea hare
+suit_func(
+  sst_raster = sst_mean,
+  depth_raster = depth_resampled,
+  eez_sf = eez_sf,
+  min_sst = 13.4,
+  max_sst = 27.1,
+  min_depth = 0,
+  max_depth = 22,
+  species_name = "California Sea Hare (Aplysia californica)"
+)
+
+# Testing another Species for fun
+suit_func(
+  sst_raster = sst_mean,
+  depth_raster = depth_resampled,
+  eez_sf = eez_sf,
+  min_sst = 12,
+  max_sst = 24,
+  min_depth = -150,
+  max_depth = 0,
+  species_name = "California spiny lobster (Panulirus Interruptus)"
+)
+
+```
+
 
