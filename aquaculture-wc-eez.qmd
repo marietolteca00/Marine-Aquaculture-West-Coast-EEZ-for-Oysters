@@ -129,9 +129,9 @@ if (crs(sst_mean) == crs(depth_resampled)) {
 ```
 
 
-#Find suitable locations
+# Find Suitable Locations for Depth and SST
 To find suitable locations for marine aquaculture, we’ll need to find locations that are suitable in terms of both SST and depth.
-```{r}
+```{r, message =FALSE}
 # Define the reclassification matrix for SST - sea level
 rcl_sst <- matrix(c(-Inf, 11, 0, 
                         11, 30, 1,
@@ -154,7 +154,13 @@ suitable <- reclassified_sst * reclassified_depth # Min = 0, Max = 1
 
 # Map it
 tm_shape(suitable)+
-  tm_raster()
+  tm_raster()+
+  tm_title("Suitability- Depth and Location")+
+  tm_layout(
+  legend.outside.position = TRUE)+
+tm_scale_bar(position = c(-.01, 0.08)) +
+tm_compass(position = c("left", "top"))+
+  tm_basemap("OpenStreetMap")
 ```
 
 ## Rasterize, Masking, CellSize, and Zonal 
@@ -204,7 +210,8 @@ tm_shape(regions) +
 tm_layout(
   legend.outside.position = TRUE)+
 tm_scale_bar(position = c(-.01, 0.08)) +
-tm_compass(position = c("right", "top"))
+tm_compass(position = c("right", "top"))+
+  tm_basemap("OpenStreetMap")
 
 
 
@@ -338,7 +345,8 @@ suit_func <- function(
     # rename column
     rename(Region = rgn) %>% 
     # new column
-    mutate(suitable_area_km2_new = round(suitable_area_km2_new, 2))
+    mutate(suitable_area_km2_new = round(suitable_area_km2_new, 2)) %>% 
+    rename("Suitable Area(km²)" = suitable_area_km2_new)
   # print
   print(eez_table)
 
