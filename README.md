@@ -43,21 +43,8 @@ library(dplyr)
 ## Reprository Set-up
 - Add Data folder to .gitignore 
 After loading in the data, your reprository should look like this:
-── data
-│   ├── average_annual_sst_2008.tif
-│   ├── average_annual_sst_2009.tif
-│   ├── average_annual_sst_2010.tif
-│   ├── average_annual_sst_2011.tif
-│   ├── average_annual_sst_2012.tif
-│   ├── depth.tif
-│   ├── wc_regions_clean.dbf
-│   ├── wc_regions_clean.prj
-│   ├── wc_regions_clean.shp
-│   └── wc_regions_clean.shx
-├── Marine-Aquaculture-West-Coast-EEZ-for-Oysters.Rproj
-└── README.md
-├── aquaculture-wc-eez.html
-└── aquaculture-wc-eez.qmd
+<img width="446" height="369" alt="Screenshot 2025-11-29 at 7 07 44 PM" src="https://github.com/user-attachments/assets/75f1487e-cd8b-42be-8d65-1fb2b473fecd" />
+
 
 
 # Workflow
@@ -85,7 +72,7 @@ This summarizes how much area in each West Coast region meets depth and temperat
 - Create a map showing suitable aquaculture regions along the West Coast using tmap
 Final outputs include a suitability map and a table summarizing suitable area per EEZ. 
 
--5. Generalizable Workflow:
+- 5. Generalizable Workflow:
 - In this workflow, the steps 2-4 will be combined into a single function. Step 1 (data preparation: CRS, extent, resolution, geometry alignment) needs to be completed before continuing with function. Once Step 1 is done, the function provides a fully reproducible process for evaluating habitat suitability for any marine aquaculture species within the West Coast EEZ. Simply change the species’ temperature and depth requirements to generate new suitability maps and area summaries.
 
 
