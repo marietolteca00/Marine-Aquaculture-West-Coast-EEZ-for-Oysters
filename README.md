@@ -1,5 +1,5 @@
 # Marine-Aquaculture-West-Coast-EEZ-for-Oysters and Additional Species
-- **Author:** Marie Tolteca, Student at Bren School of Environmental Science and Management, Masters in Environmental Data Science 
+- **Author:** Marie Tolteca, Student at Bren School of Environmental Science and Management, Masters in Environmental Data Science
 - **Date:** 11/29/2025
 
 ##Key concepts:
@@ -35,7 +35,10 @@ library(sf)
 library(dplyr)
 library(tibble)
 library(tmap)    
-library(here)    
+library(here)   
+library(knitr)
+library(kableExtra)
+library(dplyr)
 ```
 ## Reprository Set-up
 - Add Data folder to .gitignore 
@@ -81,6 +84,10 @@ This summarizes how much area in each West Coast region meets depth and temperat
 (suitable area / total EEZ area) × 100
 - Create a map showing suitable aquaculture regions along the West Coast using tmap
 Final outputs include a suitability map and a table summarizing suitable area per EEZ. 
+
+-5. Generalizable Workflow:
+- In this workflow, the steps 2-4 will be combined into a single function. Step 1 (data preparation: CRS, extent, resolution, geometry alignment) needs to be completed before continuing with function. Once Step 1 is done, the function provides a fully reproducible process for evaluating habitat suitability for any marine aquaculture species within the West Coast EEZ. Simply change the species’ temperature and depth requirements to generate new suitability maps and area summaries.
+
 
 ## Reproducibility
 

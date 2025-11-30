@@ -1,5 +1,8 @@
 ---
-title: "aquaculture-wc-eez"
+title: "Marine Aquaculture U.S. West Coast-Exclusive Economic Zones"
+subtitle: "Identifying Suitable Habitat for Marine Species"
+author: "Marie Tolteca"
+date: 11/29/2025
 format: html
 ---
 
@@ -11,6 +14,10 @@ library(terra)
 library(dismo)
 library(tmap)
 library(here)
+library(knitr)
+library(kableExtra)
+library(dplyr)
+
 ```
 
 # Import Data
@@ -91,9 +98,6 @@ names(sst_mean) <- "sst_mean"
 ```{r}
 # Obtain geographic extent/bounding box of species occurrences
 st_bbox(sst_mean)
-#      xmin       ymin       xmax       ymax 
-# -131.98475   29.99305 -114.98672   49.98842 
-
 
 # Crop depth to the SST extent 
 depth_crop <- crop(depth, ext(sst_mean))
@@ -174,8 +178,18 @@ area_by_eez_zonal <- zonal(cell_area * suitable_mask, eez_rast, fun = "sum", na.
   mutate(suitable_area_km2 = as.numeric(suitable_area_km2)) %>% 
   as_tibble() %>% 
   arrange(desc(suitable_area_km2))
-#print
-area_by_eez_zonal
+
+
+area_by_eez_zonal %>%
+  mutate(suitable_area_km2 = round(suitable_area_km2, 2)) %>% 
+  kbl(
+    caption = "Suitable Area by EEZ (km²)",
+    col.names = c("EEZ Region", "Suitable Area (km²)")
+  ) %>%
+  kable_classic(full_width = FALSE, html_font = "Arial")
+
+
+
 ```
 # Plot
 ```{r, message=FALSE}
@@ -206,7 +220,23 @@ eez_sf <- region_sf %>%
   left_join(area_by_eez_zonal, by = "rgn") %>%
   mutate(perc_area_km2 = (area_km2 / suitable_area_km2) * 100)
 
+# Table 
+eez_sf %>% 
+  st_drop_geometry() %>% 
+  as_tibble() %>% 
+  dplyr::select(rgn, suitable_area_km2, perc_area_km2) %>% 
+  mutate(
+    suitable_area_km2 = round(suitable_area_km2, 2),
+    perc_area_km2 = round(perc_area_km2, 2)
+  ) %>% 
+  kbl(
+    caption = "Suitable Area and Percentage by EEZ",
+    col.names = c("EEZ Region", "Suitable Area (km²)", "Percent of Region (%)")
+  ) %>% 
+  kable_classic(full_width = FALSE, html_font = "Arial")
+
 ```
+- The table shows the suitable area for oyster aquaculture across West Coast EEZs. Central California has the largest suitable area at 4,070 km², followed by Southern California with 3,757 km². Washington and Oregon have moderate areas of 2,378 km² and 1,074 km². Northern California has the smallest at 178 km². Overall, the most favorable regions for oyster aquaculture are Central and Southern California.
 
 # Map- After joining checking for Oysters along the West Coast 
 ```{r, message=FALSE}
@@ -243,8 +273,9 @@ tm_shape(eez_sf) +
 
 
 ```
-
 # Generalizeable Workflow Function with Map
+#### **Important** Load in datasets before using function:
+- CRS, Extent, Resolution, and Geometry all need to match before using function.
 ```{r}
 suit_func <- function(
   sst_raster,
@@ -256,6 +287,7 @@ suit_func <- function(
   max_depth,
   species_name
 ) {
+ 
   
   # Reclassify Depth
   rcl_depth <- matrix(c(
@@ -289,12 +321,27 @@ suit_func <- function(
 
   area_table <- zonal(cell_area * suit_mask, eez_rast, fun = "sum", na.rm = TRUE) %>% 
   rename("suitable_area_km2_new" = area) %>% 
-  mutate(suitable_area_km2_new = as.numeric(suitable_area_km2_new)) %>% 
+  mutate(suitable_area_km2 = as.numeric(suitable_area_km2_new)) %>% 
   as_tibble() %>% 
-  arrange(desc(suitable_area_km2_new))
-
+  arrange(desc(suitable_area_km2))
+  
   # Join back to EEZ polygons for mapping
   eez_joined <- left_join(eez_sf, area_table, by = "rgn")
+  
+    # Create table
+  eez_table <- eez_joined %>%
+    st_drop_geometry() %>%
+    # to view for each species
+    as.data.frame() %>%
+    # select columns to show in figure
+    dplyr::select(rgn, suitable_area_km2_new) %>%
+    # rename column
+    rename(Region = rgn) %>% 
+    # new column
+    mutate(suitable_area_km2_new = round(suitable_area_km2_new, 2))
+  # print
+  print(eez_table)
+
   
   # Plot It!
   suit_func_map <- 
@@ -336,8 +383,8 @@ suit_func <- function(
 #### **Aplysia californica**, California sea hare -
 - Depth range: 0 - 22 m
 - Sea Level: 13.4 - 27.1 
-#### Another Species California spiny lobster (Panulirus Interruptus) for fun
 ```{r, message=FALSE}
+
 # California sea hare
 suit_func(
   sst_raster = sst_mean,
@@ -345,12 +392,15 @@ suit_func(
   eez_sf = eez_sf,
   min_sst = 13.4,
   max_sst = 27.1,
-  min_depth = 0,
-  max_depth = 22,
+  min_depth = -22,
+  max_depth = 0,
   species_name = "California Sea Hare (Aplysia californica)"
 )
+```
+- The California sea hare *Aplysia californica* has suitable habitat primarily in Central California (118.79 km²) and Southern California (499.63 km²). No suitable habitat was identified in Oregon, Northern California, or Washington.
 
-# Testing another Species for fun
+#### Another Species California spiny lobster (Panulirus Interruptus) for fun
+```{r, message=FALSE}
 suit_func(
   sst_raster = sst_mean,
   depth_raster = depth_resampled,
@@ -361,7 +411,7 @@ suit_func(
   max_depth = 0,
   species_name = "California spiny lobster (Panulirus Interruptus)"
 )
-
 ```
 
+- The California spiny lobster (*Panulirus Interruptus*) has suitable habitat primarily in Southern California (8093.85 km²), Central California (3992.41 km²), Oregon (585.03 km²), and Washington (175.57 km²). No suitable habitat was identified in Northern California.
 
