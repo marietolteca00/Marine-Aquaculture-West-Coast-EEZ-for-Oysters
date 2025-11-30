@@ -127,15 +127,6 @@ if (crs(sst_mean) == crs(depth_resampled)) {
 
 #Find suitable locations
 To find suitable locations for marine aquaculture, we’ll need to find locations that are suitable in terms of both SST and depth.
-**Oysters:**
-Research has shown that oysters need the following conditions for optimal growth:
-
-- sea surface temperature: 11-30°C
-- depth: 0-70 meters below sea level**
-
-- **reclassify SST and depth data into locations that are suitable for oysters*
-- hint: set suitable values to 1 and unsuitable values to 0
-## find locations that satisfy both SST and depth conditions
 ```{r}
 # Define the reclassification matrix for SST - sea level
 rcl_sst <- matrix(c(-Inf, 11, 0, 
@@ -162,7 +153,7 @@ tm_shape(suitable)+
   tm_raster()
 ```
 
-## Masking
+## Rasterize, Masking, CellSize, and Zonal 
 ```{r}
 eez_rast <- rasterize(regions, 
                  # template- using extent, resolution, crs
@@ -242,9 +233,7 @@ tm_shape(eez_sf) +
     component.autoscale = FALSE,
     outer.margins = c(0.01, 0.25, 0.01, 0.05)
   ) +
-  tm_scale_bar(
-    position = c("left","bottom"), text.size=0.35
-  ) +
+  tm_scale_bar(position = c(-.02, 0.08)) +
   tm_compass(
     type = "arrow",
     position = c("right", "top")
@@ -334,7 +323,7 @@ suit_func <- function(
         component.autoscale = FALSE,
         outer.margins = c(0.01, 0.25, 0.01, 0.05)
       ) +
-      tm_scale_bar(position = c("left", "bottom"), text.size = 0.35) +
+      tm_scale_bar(position = c(-.02, 0.08)) +
       tm_compass(type = "arrow", position = c("right", "top"))+
       tm_basemap("OpenStreetMap")
   
