@@ -2,7 +2,7 @@
 - **Author:** Marie Tolteca, Student at Bren School of Environmental Science and Management, Masters in Environmental Data Science
 - **Date:** 11/29/2025
 
-##Key concepts:
+## Key concepts:
 - Combining vector/raster data, 
 - Resampling raster data
 - Masking raster data
