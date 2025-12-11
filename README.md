@@ -16,8 +16,11 @@ All data can be downloaded via this google drive, provided by Ruth Oliver on EDS
 **Data Source:** Historical sea surface temperature (SST) rasters, bathymetry data, and West Coast EEZ shapefiles to identify suitable habitat for marine species aquaculture.
 
 #### Sea Surface Temperature
-- National Environmental Satellite Data, and Information Service. Coral Reef Watch. NOAA's 5km Daily Global Satellite Sea Surface Temperature Anomaly v3.1 `https://coralreefwatch.noaa.gov/product/5km/index_5km_ssta.php`. Data Files, SST rasters: `average_annual_sst_2008.tif`,`average_annual_sst_2009.tif`,
-`average_annual_sst_2010.tif`, `average_annual_sst_2011.tif` `average_annual_sst_2012.tif`
+- National Environmental Satellite Data, and Information Service. Coral Reef Watch. NOAA's 5km Daily Global Satellite Sea Surface Temperature Anomaly v3.1 `https://coralreefwatch.noaa.gov/product/5km/index_5km_ssta.php`. Data Files, SST rasters: 
+```
+average_annual_sst_2008.tif`,`average_annual_sst_2009.tif`,
+average_annual_sst_2010.tif`, `average_annual_sst_2011.tif`, `average_annual_sst_2012.tif`
+```
 
 #### Bathymetry
 - General Bathymetric Chart of the Oceans (GEBCO).Depth raster: `depth.tif`.`https://www.gebco.net/data-products/gridded-bathymetry-data#area` 

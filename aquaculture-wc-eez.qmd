@@ -70,6 +70,8 @@ if (crs(avg_08) == crs(depth)) {
   warning("Updating coordinate reference systems to match :(")
   # transform raster to match avg_08
   depth <- project(depth, crs(avg_08))
+  print("Depth coordinate reference systems match after transformation :)")
+
 }
 
 # check and transform coordinate reference systems
@@ -79,6 +81,8 @@ if (crs(avg_08) == crs(regions)) {
   warning("Updating coordinate reference systems to match :(")
     # transform raster to match avg_08
   regions <- st_transform(regions, crs(avg_08))
+  print("Regions coordinate reference systems match after transformation :)")
+
 }
 
 
@@ -107,21 +111,21 @@ depth_resampled <- resample(depth_crop, sst_mean, method = "near")
 
 # Check Resolution
 if (all(res(sst_mean) == res(depth_resampled))) {
-  print("Resolutions matche :)")
+  print("Resolutions match :)")
 } else {
   print("Fix resolution :(")
 }
 
 # Check Extent
 if (all(ext(sst_mean) == ext(depth_resampled))) {
-  print("Extent matches :)")
+  print("Extent match :)")
 } else {
   print("Fix Extent :(")
 }
 
 # Check CRS
 if (crs(sst_mean) == crs(depth_resampled)) {
-  print("CRS matches :)")
+  print("CRS match :)")
 } else {
   print("Fix CRS :(")
 }
@@ -152,16 +156,17 @@ reclassified_depth <- classify(depth_resampled, rcl_depth)
 # Combine Oyster and Depth for suitability
 suitable <- reclassified_sst * reclassified_depth # Min = 0, Max = 1
 
-# Map it
-tm_shape(suitable)+
-  tm_raster()+
-  tm_title("Suitability- Depth and Location")+
-  tm_layout(
-  legend.outside.position = TRUE)+
-tm_scale_bar(position = c(-.01, 0.08)) +
-tm_compass(position = c("left", "top"))+
-  tm_basemap("OpenStreetMap")
+# # Map it
+# tm_shape(suitable)+
+#   tm_raster(title = "Suitable Area (km²)")+
+#   tm_title("Suitability- Depth and Location for Oysters")+
+#   tm_layout(
+#   legend.outside.position = TRUE)+
+# tm_scale_bar(position = c(-.01, 0.08)) +
+# tm_compass(position = c("left", "top"))+
+# tm_basemap("Esri.OceanBasemap")
 ```
+
 
 ## Rasterize, Masking, CellSize, and Zonal 
 ```{r}
@@ -189,7 +194,7 @@ area_by_eez_zonal <- zonal(cell_area * suitable_mask, eez_rast, fun = "sum", na.
 area_by_eez_zonal %>%
   mutate(suitable_area_km2 = round(suitable_area_km2, 2)) %>% 
   kbl(
-    caption = "Suitable Area by EEZ (km²)",
+    caption = "Suitable Area by EEZ (km²) for Oysters",
     col.names = c("EEZ Region", "Suitable Area (km²)")
   ) %>%
   kable_classic(full_width = FALSE, html_font = "Arial")
@@ -201,21 +206,25 @@ area_by_eez_zonal %>%
 ```{r, message=FALSE}
 
 tm_shape(regions) +
-  tm_polygons("rgn", palette = "Set3", title = "EEZ Regions", alpha = 1) +
+  tm_polygons("rgn", palette = 'Set3', title = "EEZ Regions", alpha = 1) +
 tm_shape(suitable_mask) +
-  tm_raster(alpha = 0.6, title = "Suitable Area") +
+  tm_raster(alpha = 0.6, title = "Suitable Area (km²)") +
 tm_shape(regions) +
   # Adding labels
   tm_text("rgn", size = 0.5) +   
 tm_layout(
-  legend.outside.position = TRUE)+
+  legend.outside.position = TRUE,
+  main.title = "Oyster Suitability in West Coast EEZ's",
+  main.title.size = 1,      
+  main.title.fontface = "bold")+
+  tm_legend(title = "Oyster Suitability")+
+# Setting manual position
 tm_scale_bar(position = c(-.01, 0.08)) +
 tm_compass(position = c("right", "top"))+
-  tm_basemap("OpenStreetMap")
-
-
+tm_basemap("Esri.OceanBasemap")
 
 ```
+In this figure there is strong suitability for oysters along Washington, Central, and Southern California. Following this we have Oregon, and minimal suitability in Northern California. Let's go ahead and combine both dataframe to better showcase this.
 
 # Join Dataframes 
 ```{r}
@@ -225,7 +234,7 @@ region_sf <- st_as_sf(regions)
 # Join zonal data and calculate percentage in one step
 eez_sf <- region_sf %>%
   left_join(area_by_eez_zonal, by = "rgn") %>%
-  mutate(perc_area_km2 = (area_km2 / suitable_area_km2) * 100)
+  mutate(perc_area_km2 = (suitable_area_km2 / area_km2) * 100)
 
 # Table 
 eez_sf %>% 
@@ -247,20 +256,25 @@ eez_sf %>%
 
 # Map- After joining checking for Oysters along the West Coast 
 ```{r, message=FALSE}
+# Setting color palette
+colors <- c("#a6761d","#e9c46a","#90be6d","#43aa8b","#577590", "#6a4c93") 
+
+
 tm_shape(eez_sf) +
   tm_polygons(
     "suitable_area_km2",
-    palette = "-mako",
+    palette = colors,
     style = "cont",
-    title = "Suitable Area (km²)"
+    title = "Suitable Area (km²)",
+    alpha = 0.9
   ) +
   tm_text(
     "rgn",
     size = 0.45,
     col = "black",
-    fontface = "bold",
-    bgcol = "antiquewhite",
-    bgcol_alpha = 0.2) +
+    fontface = "bold")+
+    # bgcol = "antiquewhite",
+    # bgcol_alpha = 0.2) +
   tm_layout(
     main.title = "Suitable Area for Oyster Aquaculture in California EEZs\nPercent of Total EEZ Area Meeting Preferred Temperature & Depth Criteria",
     main.title.size = 0.8,       # Controls title + subtitle size
@@ -275,11 +289,13 @@ tm_shape(eez_sf) +
     type = "arrow",
     position = c("right", "top")
   )+
-  tm_basemap("OpenStreetMap")
+  tm_basemap("Esri.OceanBasemap")
 
 
 
 ```
+In this figure, the suitable areas are more clearly distinguished. Central and Southern California contain the largest suitable areas for oysters, followed by Washington. Oregon has less suitable area in comparison, and Northern California shows little to no suitable habitat.
+
 # Generalizeable Workflow Function with Map
 #### **Important** Load in datasets before using function:
 - CRS, Extent, Resolution, and Geometry all need to match before using function.
@@ -294,7 +310,6 @@ suit_func <- function(
   max_depth,
   species_name
 ) {
- 
   
   # Reclassify Depth
   rcl_depth <- matrix(c(
@@ -346,7 +361,9 @@ suit_func <- function(
     rename(Region = rgn) %>% 
     # new column
     mutate(suitable_area_km2_new = round(suitable_area_km2_new, 2)) %>% 
-    rename("Suitable Area(km²)" = suitable_area_km2_new)
+    rename("Suitable Area(km²)" = suitable_area_km2_new) %>% 
+    # Add a cleaned up table
+    kable(digits = 2, caption = paste("Suitable Area for", species_name))
   # print
   print(eez_table)
 
@@ -356,9 +373,10 @@ suit_func <- function(
     tm_shape(eez_joined) +
       tm_polygons(
         "suitable_area_km2_new",
-        palette = "-mako",
+        palette = colors,
         style = "cont",
-        title = "Suitable Area (km²)"
+        title = "Suitable Area (km²)",
+        alpha = 0.9
       ) +
       tm_text("rgn", 
               size = 0.45, 
@@ -423,3 +441,6 @@ suit_func(
 
 - The California spiny lobster (*Panulirus Interruptus*) has suitable habitat primarily in Southern California (8093.85 km²), Central California (3992.41 km²), Oregon (585.03 km²), and Washington (175.57 km²). No suitable habitat was identified in Northern California.
 
+# Conclusion
+
+Overall, this workflow successfully identified suitable habitat areas for marine species, with the ability to map suitability for any species available through SeaLifeBase. However, the analysis is limited by the use of average SST data from 2008–2012 and the exclusion of other important environmental and human driven factors such as habitat type, food resources, and coastal activities. Future work should incorporate more recent or seasonal temperature datasets, additional environmental predictors, and potentially other spatial layers to improve accuracy and support real world management or aquaculture planning.
