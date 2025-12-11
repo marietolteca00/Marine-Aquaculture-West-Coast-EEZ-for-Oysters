@@ -2,7 +2,7 @@
 title: "Marine Aquaculture U.S. West Coast-Exclusive Economic Zones"
 subtitle: "Identifying Suitable Habitat for Marine Species"
 author: "Marie Tolteca"
-date: 11/29/2025
+date: 12/10/2025
 format: html
 ---
 
@@ -202,6 +202,8 @@ area_by_eez_zonal %>%
 
 
 ```
+In this table we can now see the suitable area covered by each EEZ region for Oysters. Let's go ahead and see view this in a map to visually see our results.
+
 # Plot
 ```{r, message=FALSE}
 
